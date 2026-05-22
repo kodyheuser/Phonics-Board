@@ -1,0 +1,668 @@
+:root {
+    --board-width: 1920px;
+    --board-height: 1035px;
+}
+
+/* ============================================================
+   1. FONT LOADING & BASE STYLES
+   ============================================================ */
+@font-face {
+    font-family: 'OpenDyslexic';
+    src: url('fonts/OpenDyslexic-Regular.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+
+html {
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+body {
+    margin: 0;
+    /* This physically extends the dark background by 400px at the bottom, 
+       giving you the massive blank space to store your tiles. */
+    padding: 0 0 400px 0;
+    background-color: #1a1a1a;
+    color: #fff;
+    width: 100%;
+    min-height: 100vh;
+    cursor: default;
+    user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+}
+
+    body::after {
+        content: "";
+        display: block;
+        height: 1000px; 
+        width: 100%;
+    }
+
+    body.bg-white {
+        background-color: #f0f0f0;
+        color: #000;
+    }
+
+    body.bg-black {
+        background-color: #1a1a1a;
+        color: #fff;
+    }
+
+    body.bg-purple {
+        background-color: #e1E5F5;
+        color: #000;
+    }
+
+    body.bg-dark-blue {
+        background-color: #0b102c;
+        color: #ddddff;
+    }
+
+input, textarea {
+    -webkit-user-select: text;
+    user-select: text;
+    cursor: text;
+}
+
+/* ============================================================
+   2. UI ELEMENTS (Toolbar, Buttons, Modals)
+   ============================================================ */
+/* ============================================================
+   2. TOOLBAR (UI LAYER - Top Most)
+   ============================================================ */
+.toolbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 45px;
+    background: #1E8B6A;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 10px;
+    box-sizing: border-box;
+    z-index: 1000000;
+    user-select: none;
+    overflow: hidden;
+}
+    .toolbar-logo {
+    height: 28px;
+    width: auto;
+    margin-right: 8px;
+    display: block;
+    border-radius: 4px
+    }
+
+    .toolbar h1 {
+        margin: 0;
+        font-size: 1.2rem;
+        line-height: 1;
+    }
+
+.left-group, .right-group, .drawing-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.icon-btn, .tool-btn, .reset-btn, .size-btn {
+    padding: 5px 10px;
+    border: none;
+    border-radius: 4px;
+    background: #555;
+    color: white;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+    .tool-btn.active, .selected-size {
+        background-color: #00bcd4;
+        color: black;
+        box-shadow: 0 0 10px #00bcd4;
+    }
+
+.red-btn {
+    background-color: #b71c1c;
+}
+/* ============================================================
+   6. MENUS & MODALS
+   ============================================================ */
+#settings-menu {
+    position: fixed;
+    top: 45px;
+    left: 10px;
+    background: #333;
+    padding: 15px;
+    border-radius: 0 0 10px 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    z-index: 1000001;
+    min-width: 200px;
+    display: none;
+    max-height: calc(100vh - 65px); 
+    overflow-y: auto; 
+}
+
+    #settings-menu::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    #settings-menu::-webkit-scrollbar-track {
+        background: #222;
+        border-radius: 0 0 10px 0;
+    }
+
+    #settings-menu::-webkit-scrollbar-thumb {
+        background: #555;
+        border-radius: 4px;
+    }
+
+        #settings-menu::-webkit-scrollbar-thumb:hover {
+            background: #00bcd4;
+        }
+
+#landing-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.95);
+    z-index: 1000002;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: #333;
+    padding: 40px;
+    border-radius: 15px;
+    text-align: center;
+    border: 1px solid #444;
+}
+
+#modal-input {
+    padding: 12px;
+    font-size: 18px;
+    border-radius: 6px;
+    border: 1px solid #555;
+    background: #222;
+    color: white;
+    width: 250px;
+    margin-bottom: 20px;
+    display: block;
+}
+
+/* ============================================================
+   3. BOARD & DRAWING LAYER
+   ============================================================ */
+#board {
+    position: relative;
+    width: var(--board-width, 1920px);
+    height: var(--board-height, 1035px);
+    /* Pushes the board down 80px from the top so it clears your toolbar */
+    margin: 80px auto 0 auto;
+    /* The box-shadow has been completely removed! */
+    /* Keeps tiles visible even when dragged down into the 400px padding zone */
+    overflow: visible;
+}
+
+#drawing-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 900000; 
+    background: transparent;
+}
+
+.drawing-mode-active #drawing-layer {
+    pointer-events: auto;
+    cursor: crosshair;
+}
+
+/* ============================================================
+   4. TILES
+   ============================================================ */
+.tile {
+    width: 46px;
+    height: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 1.1rem;
+    cursor: grab;
+    user-select: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    z-index: 100;
+    border: 2px solid transparent;
+    color: #000;
+}
+
+    .tile:active {
+        cursor: grabbing;
+    }
+
+    .tile.wide {
+        width: 66px;
+        font-size: 0.95rem;
+    }
+
+    .tile.white {
+        background-color: #fff;
+    }
+
+    .tile.green {
+        background-color: #006b1a;
+        color: #fff;
+    }
+
+    .tile.yellow {
+        background-color: #fdd835;
+    }
+
+    .tile.red {
+        background-color: #FF7045;
+    }
+
+.tile-placeholder {
+    width: 46px;
+    height: 30px;
+    background: transparent;
+    border: 2px solid transparent;
+}
+
+    .tile-placeholder.wide {
+        width: 66px;
+    }
+
+/* ============================================================
+   5. LAYOUT GRIDS (Phonics & Roots)
+   ============================================================ */
+#initial-layout {
+    margin-top: 35px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding-left: 40px;
+    width: var(--board-width);
+    height: var(--board-height);
+    box-sizing: border-box;
+}
+
+/* Phonics */
+.alphabet-strip {
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: center;
+    gap: 4px;
+    width: 95%;
+    margin-bottom: 60px;
+}
+
+.main-split {
+    display: flex;
+    width: 98%;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 30px;
+    padding-right: 40px;
+}
+
+.left-section {
+    display: flex;
+    flex-direction: column;
+    gap: 120px;
+    padding-top: 40px;
+    margin-right: 40px;
+}
+
+.moon-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 46px);
+    gap: 10px 6px;
+}
+
+.prefix-col {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+}
+
+.center-complex {
+    display: flex;
+    flex-direction: column;
+    gap: 100px;
+}
+
+.vowel-valley-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 46px);
+    gap: 10px 6px;
+}
+
+.smile-grid {
+    display: grid;
+    grid-template-columns: repeat(9, 46px);
+    gap: 10px 6px;
+}
+
+.right-complex {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    align-items: flex-end;
+}
+
+.cluster-row {
+    display: flex;
+    gap: 6px;
+}
+
+.floss-col-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.floss-pair {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.suffix-row {
+    margin-top: 70px;
+    display: flex;
+    gap: 10px 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+}
+
+/* Roots */
+#section-roots {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* Pushes the entire section down 100px for even better spacing */
+    margin-top: 100px !important;
+    pointer-events: none;
+}
+
+.roots-layout {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: center !important;
+    align-items: flex-start !important;
+    width: 100% !important;
+    /* THE FIX: Allows the columns to move if the screen is too narrow */
+    flex-wrap: nowrap;
+    overflow: visible;
+    pointer-events: auto;
+}
+
+/* LEFT COLUMN: Mirror of the right side */
+.roots-col.left-aligned {
+    flex: 1 1 0% !important; /* The 0% allows it to shrink to nothing if needed */
+    display: flex !important;
+    flex-direction: column;
+    align-items: flex-end !important;
+    padding-right: 2% !important; /* Uses 2% of screen width instead of 50px */
+    gap: 10px;
+    min-width: 0;
+}
+
+.roots-center {
+    flex: 0 0 auto !important;
+    max-width: 60%; /* Prevents the center from hogging the whole screen */
+}
+
+/* RIGHT COLUMN: Mirror of the left side */
+.roots-col.right-aligned {
+    flex: 1 1 0% !important;
+    display: flex !important;
+    flex-direction: column;
+    align-items: flex-start !important;
+    padding-left: 2% !important; /* Uses 2% of screen width instead of 50px */
+    min-width: 0;
+}
+
+/* The rest of your row/pair logic looks great */
+.roots-pair {
+    display: flex;
+    gap: 10px;
+}
+
+.roots-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 10px; /* Added a tiny bit of air between rows */
+}
+
+.roots-bottom-row {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 40px; /* Increased to keep ciate/tiate away from the main blocks */
+    pointer-events: auto;
+}
+
+.roots-vertical-pair {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}#section-roots {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 80px !important; /* INCREASED: Pushes the roots down away from the top rows */
+    pointer-events: none;
+}
+
+.roots-layout {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: center !important;
+    align-items: flex-start !important;
+    width: 100% !important;
+    pointer-events: auto;
+}
+
+.roots-col.left-aligned {
+    justify-self: start;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.roots-center {
+    flex: 0 0 auto !important;
+}
+
+.roots-col.right-aligned {
+    flex: 1 !important;
+    align-items: flex-start !important; /* Snaps red tiles cleanly towards the center */
+    padding-left: 50px !important; /* Gap between white and red */
+}
+
+.roots-pair {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.roots-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.roots-bottom-row {
+    display: flex;
+    justify-content: center;
+    gap: 15px; /* Space between the bottom pairs */
+    margin-top: 30px; /* Space between the bottom row and the main columns */
+    pointer-events: auto;
+}
+
+.roots-vertical-pair {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Font Classes */
+.font-opendyslexic {
+    font-family: 'OpenDyslexic', sans-serif !important;
+}
+
+.font-poppins {
+    font-family: 'Poppins', sans-serif !important;
+}
+
+.font-comic {
+    font-family: 'Comic Sans MS', 'Comic Sans', cursive !important;
+}
+
+.font-serif {
+    font-family: 'Times New Roman', Times, serif !important;
+}
+
+/* Filter Logic */
+[data-current-level="1"] .tile[data-min-start="2"], [data-current-level="1"] .tile[data-min-start="3"], [data-current-level="1"] .tile[data-min-start="4"],
+[data-current-level="2"] .tile[data-min-start="3"], [data-current-level="2"] .tile[data-min-start="4"],
+[data-current-level="3"] .tile[data-min-start="4"] {
+    display: none !important;
+}
+
+.tile[data-state="active"] {
+    display: flex !important;
+}
+
+
+.remote-cursor {
+    position: absolute; 
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    pointer-events: none;
+    z-index: 999999;
+    transition: left 0.1s linear, top 0.1s linear;
+}
+
+/* ============================================================
+   7. ROLE-BASED ACCESS CONTROL (RBAC) STYLES
+   ============================================================ */
+/* Hide elements reserved only for the Tutor */
+body[data-role="student"] .tutor-only {
+    display: none !important;
+}
+
+/* Dim buttons if the student lacks permission */
+body[data-role="student"] .student-restricted {
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+/* Visually indicate to students when tiles cannot be grabbed */
+body[data-role="student"] .board.student-restricted-move .tile {
+    cursor: not-allowed !important;
+}
+
+/* ============================================================
+   8. TRASH CAN
+   ============================================================ */
+#trash-can {
+    position: fixed;
+    bottom: -100px;
+    right: 20px;
+    background: rgba(229, 57, 53, 0.9);
+    color: white;
+    padding: 15px 25px;
+    border-radius: 10px 10px 0 0;
+    font-size: 16px;
+    font-weight: bold;
+    z-index: 9999;
+    transition: bottom 0.2s ease-out, transform 0.1s;
+    border: 2px solid #b71c1c;
+    border-bottom: none;
+    box-shadow: 0 -5px 15px rgba(0,0,0,0.5);
+    pointer-events: none;
+}
+
+/* Slide up when the body has the dragging class */
+body.is-dragging-tile #trash-can {
+    bottom: 0;
+}
+
+/* Make the trash can pulse when hovering over it */
+body.is-dragging-tile.trash-hover #trash-can {
+    background: #ff5252;
+    transform: scale(1.1);
+    padding-bottom: 25px; /* Visual pop */
+}
+
+/* ============================================================
+   9. NEW TUTOR FEATURES (Flips & Backgrounds)
+   ============================================================ */
+
+/* Flipped / Blind Tiles */
+.tile.blind {
+    background-color: #666 !important; 
+    color: transparent !important; 
+    border-color: #444 !important;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.5) !important;
+    transition: background-color 0.2s, color 0.1s;
+}
+
+/* Graphic Organizer Background Layer */
+#board {
+    position: relative;
+    /* THE FIX: The container is now always full-width so no "walls" exist */
+    width: 100%;
+    min-height: 100vh;
+    margin-top: 80px;
+    overflow: visible;
+}
+   
+    #board::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+       
+        background-image: url('/watermark.png');
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: 40%; /* Adjust this percentage to make it bigger or smaller */
+        pointer-events: none; 
+        z-index: 1; 
+    }
+
+.tile.plus-tile {
+    background-color: #2CA977 !important;
+    color: white !important;
+}
+
+    /* Ensures it looks like a tile even if it doesn't have the standard tile class */
+    .plus-tile:active {
+        cursor: grabbing;
+    }
